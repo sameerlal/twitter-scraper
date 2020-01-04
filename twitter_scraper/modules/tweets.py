@@ -10,9 +10,9 @@ session = HTMLSession()
 browser = mechanicalsoup.StatefulBrowser()
 browser.addheaders = [('User-agent', 'Firefox')]
 
-def get_tweets(query, pages=None):
+def get_tweets(query, pages=10000):
     """Gets tweets for a given user, via the Twitter frontend API.
-        If pages not passed, gets all tweets
+      
     """
     
     
@@ -102,14 +102,17 @@ def get_tweets(query, pages=None):
                     else False
 
                 videos = []
-                video_nodes = tweet.find(".PlayableMedia-player")
-                for node in video_nodes:
-                    styles = node.attrs['style'].split()
-                    for style in styles:
-                        if style.startswith('background'):
-                            tmp = style.split('/')[-1]
-                            video_id = tmp[:tmp.index('.jpg')]
-                            videos.append({'id': video_id})
+                try:
+                    video_nodes = tweet.find(".PlayableMedia-player")
+                    for node in video_nodes:
+                        styles = node.attrs['style'].split()
+                        for style in styles:
+                            if style.startswith('background'):
+                                tmp = style.split('/')[-1]
+                                video_id = tmp[:tmp.index('.jpg')]
+                                videos.append({'id': video_id})
+                except:
+                    videos = []
 
                 tweets.append({
                     'tweetId': tweet_id,
@@ -135,10 +138,9 @@ def get_tweets(query, pages=None):
 
             if r_json['has_more_items']:
                 r = session.get(url, params={'max_position': last_tweet}, headers=headers)
-                if pages != None:
-                    pages += -1
+                pages -= 1
             else:
-                break
+                continue
 
     yield from gen_tweets(pages)
 
