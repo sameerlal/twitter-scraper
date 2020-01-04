@@ -10,9 +10,12 @@ session = HTMLSession()
 browser = mechanicalsoup.StatefulBrowser()
 browser.addheaders = [('User-agent', 'Firefox')]
 
-def get_tweets(query, pages=25):
-    """Gets tweets for a given user, via the Twitter frontend API."""
-
+def get_tweets(query, pages=None):
+    """Gets tweets for a given user, via the Twitter frontend API.
+        If pages not passed, gets all tweets
+    """
+    
+    
     after_part = f'include_available_features=1&include_entities=1&include_new_items_bar=true'
     if query.startswith('#'):
         query = quote(query)
@@ -32,10 +35,12 @@ def get_tweets(query, pages=25):
 
     def gen_tweets(pages):
         r = session.get(url, headers=headers)
+        r_json = {}
 
-        while pages > 0:
+        while pages == None or pages > 0:
             try:
-                html = HTML(html=r.json()['items_html'],
+                r_json = r.json()
+                html = HTML(html=r_json['items_html'],
                             url='bunk', default_encoding='utf-8')
             except KeyError:
                 raise ValueError(
@@ -103,8 +108,7 @@ def get_tweets(query, pages=25):
                     for style in styles:
                         if style.startswith('background'):
                             tmp = style.split('/')[-1]
-                            video_id = tmp[:tmp.index('.jpg')] if 'jpg' in tmp \
-                                else tmp[:tmp.index('.png')] if 'png' in tmp else None
+                            video_id = tmp[:tmp.index('.jpg')]
                             videos.append({'id': video_id})
 
                 tweets.append({
@@ -129,8 +133,12 @@ def get_tweets(query, pages=25):
                     tweet['text'] = re.sub(r'\Spic\.twitter', ' pic.twitter', tweet['text'], 1)
                     yield tweet
 
-            r = session.get(url, params={'max_position': last_tweet}, headers=headers)
-            pages += -1
+            if r_json['has_more_items']:
+                r = session.get(url, params={'max_position': last_tweet}, headers=headers)
+                if pages != None:
+                    pages += -1
+            else:
+                break
 
     yield from gen_tweets(pages)
 
