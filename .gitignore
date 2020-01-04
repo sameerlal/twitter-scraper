@@ -8,5 +8,5 @@ __pycache__/
 venv/
 
 /t.py
-
+*txt
 /twitter_scraper.egg-info/
